@@ -1,5 +1,6 @@
 import { SNSEvent } from 'aws-lambda';
 import { parseEvent, ServiceOrderEvent } from './event';
+import { LoggingDeliveryChannel } from './deliveryChannel';
 
 /**
  * Entrega notificacoes a partir de eventos do SNS.
@@ -49,3 +50,12 @@ export function createHandler(channel: DeliveryChannel) {
     }
   };
 }
+
+/**
+ * Ponto de entrada que a Lambda procura.
+ *
+ * Sem este export a function faz deploy normalmente e quebra em toda
+ * invocacao com "Runtime.HandlerNotFound: index.handler is undefined or not
+ * exported" -- e nenhum teste pega, porque todos compoem via createHandler.
+ */
+export const handler = createHandler(new LoggingDeliveryChannel());

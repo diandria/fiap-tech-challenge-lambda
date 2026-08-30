@@ -92,3 +92,24 @@ describe('Notifications function end to end', () => {
     await expect(run(['nao-e-json', '{}', 'null'])).resolves.toBeUndefined();
   });
 });
+
+describe('Lambda entry point', () => {
+  // A Lambda procura por `handler` no bundle. Sem este export, a function faz
+  // deploy e quebra em toda invocacao com Runtime.HandlerNotFound -- falha que
+  // nenhum teste de composicao pega.
+  it('should export a handler GIVEN the module is loaded WHEN the runtime looks for it', async () => {
+    const mod = await import('../src/handler');
+
+    expect(typeof mod.handler).toBe('function');
+  });
+
+  it('should run without explicit dependencies GIVEN the exported handler WHEN invoked', async () => {
+    const spy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    const { handler } = await import('../src/handler');
+
+    await handler(snsEvent([statusEvent()]));
+
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});

@@ -26,3 +26,14 @@ output "internal_token_parameter" {
   description = "Nome do parametro SSM com o token interno. Nao e o token."
   value       = aws_ssm_parameter.internal_token.name
 }
+
+# Consumido pela aplicacao (M8.T10) para publicar os eventos.
+output "sns_topic_arn" {
+  description = "Topico onde a aplicacao publica eventos de ordem de servico."
+  value       = aws_sns_topic.service_order_events.arn
+}
+
+output "notifications_dlq_url" {
+  description = "Fila de dead-letter das notificacoes que falharam de forma permanente."
+  value       = aws_sqs_queue.notifications_dlq.url
+}
