@@ -42,10 +42,15 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
+      # Uma operacao real, e nao sts get-caller-identity: quando o Learner Lab
+      # revoga a sessao (policy voc-cancel-cred), o sts continua respondendo a
+      # identidade e so as chamadas de verdade sao negadas. Checar com sts
+      # deixaria o workflow seguir e falhar adiante, com erro que nao aponta
+      # para a causa.
       - name: Conferir credencial
         run: |
-          aws sts get-caller-identity > /dev/null 2>&1 || {
-            echo "::error::Credencial da AWS ausente, expirada ou revogada. A do Learner Lab cai quando a sessao do lab para."
+          aws ec2 describe-vpcs --max-items 1 > /dev/null 2>&1 || {
+            echo "::error::Credencial da AWS ausente, expirada ou revogada. A do Learner Lab cai quando a sessao do lab para: rode Start Lab e depois ./scripts/refresh-aws-secrets.sh"
             exit 1
           }
 
