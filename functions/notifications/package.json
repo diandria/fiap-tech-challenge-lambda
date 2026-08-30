@@ -9,9 +9,7 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src tests"
   },
-  "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.700.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
     "@types/jest": "^29.5.12",
@@ -21,5 +19,7 @@
     "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }
