@@ -15,24 +15,6 @@ variable "app_base_url" {
   type        = string
 }
 
-variable "jwt_secret" {
-  description = <<-TXT
-    Segredo de assinatura do JWT.
-
-    Precisa ser identico ao da aplicacao: ela valida com o mesmo segredo. Se
-    divergir, o token e assinado com sucesso e recusado do outro lado, com erro
-    que nao aponta para a causa.
-  TXT
-  type        = string
-  sensitive   = true
-}
-
-variable "internal_token" {
-  description = "Segredo que autentica a function no endpoint interno de lookup."
-  type        = string
-  sensitive   = true
-}
-
 variable "lambda_runtime" {
   description = <<-TXT
     Runtime das functions.

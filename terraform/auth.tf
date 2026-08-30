@@ -34,8 +34,8 @@ resource "aws_lambda_function" "auth" {
   environment {
     variables = {
       APP_BASE_URL   = var.app_base_url
-      JWT_SECRET     = var.jwt_secret
-      INTERNAL_TOKEN = var.internal_token
+      JWT_SECRET     = random_password.jwt_secret.result
+      INTERNAL_TOKEN = random_password.internal_token.result
 
       # Convencao semantica, com service.name distinto por function.
       OTEL_SERVICE_NAME = "car-repair-shop-auth"
