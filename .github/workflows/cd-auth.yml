@@ -1,0 +1,79 @@
+name: CD auth
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/auth/**'
+      - 'terraform/**'
+      - '.github/workflows/cd-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-lambda
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.15.6"
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Publicar function auth
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      TF_VAR_app_base_url: ${{ secrets.APP_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Conferir credencial
+        run: |
+          aws sts get-caller-identity > /dev/null 2>&1 || {
+            echo "::error::Credencial da AWS ausente, expirada ou revogada. A do Learner Lab cai quando a sessao do lab para."
+            exit 1
+          }
+
+      # O bundle precisa existir antes do terraform: o archive_file empacota
+      # dist/index.js, e sem ele o plan falha por arquivo inexistente.
+      - name: Build da function
+        working-directory: functions/auth
+        run: |
+          npm ci
+          npm run build
+
+      - name: terraform apply
+        working-directory: terraform
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false -no-color
+
+      # Apply verde nao prova que a function funciona: o deploy anterior desta
+      # function subiu sem o export handler e quebrava em toda invocacao.
+      - name: Invocar a function e conferir a resposta
+        run: |
+          aws lambda invoke --function-name car-repair-shop-auth \
+            --payload "$(echo -n '{"body":"{}"}' | base64 -w0)" \
+            /tmp/out.json > /tmp/meta.json
+          cat /tmp/meta.json
+          if grep -q FunctionError /tmp/meta.json; then
+            echo "::error::A function respondeu com erro"
+            cat /tmp/out.json
+            exit 1
+          fi
+          echo "invocacao sem erro"
