@@ -1,3 +1,7 @@
-# Copie para terraform.tfvars e ajuste.
-# Os segredos NAO entram aqui: sao gerados pelo Terraform e publicados no SSM.
-app_base_url = "https://changeme.execute-api.us-east-1.amazonaws.com"
+# Nenhuma variavel e obrigatoria.
+#
+# Os segredos sao gerados pelo Terraform e publicados no SSM; o endereco do
+# gateway vem do estado do repositorio do cluster.
+#
+# Descomente apenas para apontar a function para outro endereco:
+# app_base_url = "https://outro-endereco.example.com"

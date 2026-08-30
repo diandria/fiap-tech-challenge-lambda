@@ -33,7 +33,7 @@ resource "aws_lambda_function" "auth" {
 
   environment {
     variables = {
-      APP_BASE_URL   = var.app_base_url
+      APP_BASE_URL   = local.app_base_url
       JWT_SECRET     = random_password.jwt_secret.result
       INTERNAL_TOKEN = random_password.internal_token.result
 

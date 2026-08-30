@@ -11,8 +11,15 @@ variable "environment" {
 }
 
 variable "app_base_url" {
-  description = "Endereco da aplicacao, para o lookup de cliente. Alcancavel pelo API Gateway."
+  description = <<-TXT
+    Endereco da aplicacao, para o lookup de cliente.
+
+    Vazio por padrao: o valor real vem do estado do repositorio do cluster, e
+    acompanha sozinho quando o gateway e recriado. Preencher so para apontar
+    para outro lugar.
+  TXT
   type        = string
+  default     = null
 }
 
 variable "lambda_runtime" {
