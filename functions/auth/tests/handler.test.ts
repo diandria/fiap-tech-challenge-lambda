@@ -1,5 +1,14 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { handler } from '../src/handler';
+import { createHandler } from '../src/handler';
+import { JwtTokenIssuer } from '../src/tokenIssuer';
+
+// A validacao de payload acontece antes de qualquer dependencia ser usada, mas
+// o handler exportado as constroi a partir do ambiente. Compor aqui mantem
+// estes testes focados na fronteira, sem precisar de variavel de ambiente.
+const handler = createHandler({
+  lookup: { byCpf: jest.fn() },
+  issuer: new JwtTokenIssuer({ secret: 'nao-usado', expiresIn: '1h' }),
+});
 
 const eventWith = (body: unknown): APIGatewayProxyEventV2 =>
   ({ body: JSON.stringify(body) }) as APIGatewayProxyEventV2;
