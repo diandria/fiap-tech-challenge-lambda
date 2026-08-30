@@ -1,0 +1,5 @@
+# Copie para terraform.tfvars e troque os valores.
+# terraform.tfvars esta no .gitignore e nao deve ser commitado.
+app_base_url   = "https://changeme.execute-api.us-east-1.amazonaws.com"
+jwt_secret     = "changeme-usar-o-mesmo-segredo-da-aplicacao"
+internal_token = "changeme-generate-with-openssl-rand-base64-32"
