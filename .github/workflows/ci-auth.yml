@@ -1,0 +1,51 @@
+name: CI auth
+
+on:
+  pull_request:
+    # Caminho filtrado de proposito: mexer numa function nao roda o CI da
+    # outra. E isso que torna os projetos independentes de fato, e nao pastas
+    # no mesmo repositorio.
+    paths:
+      - 'functions/auth/**'
+      - '.github/workflows/ci-auth.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: functions/auth
+
+jobs:
+  test:
+    name: Testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Testes com cobertura
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      # A Lambda procura por 'handler' no bundle. Sem este export a function
+      # faz deploy e quebra em toda invocacao com Runtime.HandlerNotFound --
+      # falha que os testes de composicao nao pegam.
+      - name: O bundle exporta handler
+        run: |
+          node -e "
+            const m = require('./dist/index.js');
+            if (typeof m.handler !== 'function') {
+              console.error('dist/index.js nao exporta handler');
+              process.exit(1);
+            }
+            console.log('handler exportado');
+          "
