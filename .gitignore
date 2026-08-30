@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+
+# O estado do Terraform guarda valores sensiveis e este repositorio e publico.
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+.terraform/
+*.tfplan
+
+.env
