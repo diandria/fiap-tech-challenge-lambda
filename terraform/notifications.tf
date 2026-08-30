@@ -1,16 +1,31 @@
 # Topico onde a aplicacao publica eventos de ordem de servico. E a fronteira
 # assincrona do ADR-003: a aplicacao publica e segue: nao espera a notificacao.
+# AVD-AWS-0136 pede chave gerenciada por cliente (CMK) em vez da chave da AWS.
+# Suprimido com justificativa: a chave gerenciada ja cifra em repouso, e o que
+# a CMK acrescenta -- politica e rotacao proprias -- nao tem uso neste
+# ambiente, que e efemero e recriado a cada ciclo. Uma CMK custaria USD 1/mes
+# e mais um recurso para lembrar de destruir.
+#trivy:ignore:AVD-AWS-0136
 resource "aws_sns_topic" "service_order_events" {
   name = "car-repair-shop-service-order-events"
+
+  # Cifra em repouso com a chave gerenciada da conta. O evento carrega nome e
+  # e-mail do cliente, e a chave gerenciada nao custa nada.
+  kms_master_key_id = "alias/aws/sns"
 }
 
 # Sem dead-letter, um evento que falha nas tentativas desaparece em silencio --
 # e a entrega confiavel que justifica o ADR-003 deixa de existir.
+# Mesma razao do topico: a chave gerenciada cifra, e a CMK nao agrega aqui.
+#trivy:ignore:AVD-AWS-0135
 resource "aws_sqs_queue" "notifications_dlq" {
   name = "car-repair-shop-notifications-dlq"
 
   # Uma semana e tempo suficiente para alguem notar e investigar.
   message_retention_seconds = 604800
+
+  # A mensagem que cai aqui e o evento original, com dados do cliente.
+  kms_master_key_id = "alias/aws/sqs"
 }
 
 data "archive_file" "notifications" {
