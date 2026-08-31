@@ -54,13 +54,18 @@ jobs:
             exit 1
           }
 
-      # O bundle precisa existir antes do terraform: o archive_file empacota
-      # dist/index.js, e sem ele o plan falha por arquivo inexistente.
-      - name: Build da function
-        working-directory: functions/auth
+      # As DUAS functions, e nao so a desta pipeline.
+      #
+      # As pipelines sao independentes, mas o estado do Terraform e um so: o
+      # `apply` cobre a configuracao inteira, e o `archive_file` da outra
+      # function empacota o `dist/index.js` dela. Construir so uma faz o apply
+      # morrer em "could not archive missing file", apontando para um caminho
+      # que nada nesta pipeline mexeu -- erro que nao parece ter relacao com a
+      # mudanca que disparou o deploy.
+      - name: Build das functions
         run: |
-          npm ci
-          npm run build
+          (cd functions/auth && npm ci && npm run build)
+          (cd functions/notifications && npm ci && npm run build)
 
       - name: terraform apply
         working-directory: terraform
