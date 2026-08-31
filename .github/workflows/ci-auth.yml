@@ -20,8 +20,19 @@ jobs:
   test:
     name: Testes e build
     runs-on: ubuntu-latest
+
+    # No nivel do job para que os passos decidam por presenca: `secrets` nao
+    # existe no `if` de um job, mas `env` existe.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
     steps:
+      # Historico completo: sem ele o Sonar perde o conceito de "codigo novo",
+      # que e sobre o que os portoes de qualidade dele decidem.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -49,3 +60,15 @@ jobs:
             }
             console.log('handler exportado');
           "
+
+      - name: Analise do SonarQube
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v4
+        with:
+          projectBaseDir: functions/auth
+
+      # Avisa em vez de falhar sem o servidor configurado: um CI que vive
+      # vermelho por falta de credencial para de ser lido.
+      - name: Avisar configuracao ausente
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning::SONAR_TOKEN nao configurado — analise do SonarQube pulada."
