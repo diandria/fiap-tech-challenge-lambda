@@ -83,10 +83,5 @@ else
   publicar_em "" "$(basename "$PWD")" || fail "Falha ao publicar."
 fi
 
-# O endereco do gateway nao expira, mas o CD precisa dele para o terraform.
-if [ -n "${APP_BASE_URL:-}" ]; then
-  printf '%s' "$APP_BASE_URL" | gh secret set APP_BASE_URL >/dev/null && echo "  APP_BASE_URL"
-fi
-
 echo
 echo "Pronto. Os secrets valem enquanto a sessao do lab durar (cerca de 4h)."
