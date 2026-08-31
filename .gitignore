@@ -11,3 +11,8 @@ coverage/
 *.tfplan
 
 .env
+
+# Artefatos gerados pelo archive_file do Terraform a cada plan/apply.
+# Versiona-los so produz diff em todo build e um zip desatualizado no repo,
+# que nao corresponde ao codigo ao lado dele.
+terraform/*.zip
