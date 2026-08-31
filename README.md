@@ -139,8 +139,13 @@ O CD **não confia no apply**: depois de publicar, ele invoca a function e falha
 
 ### Pré-requisitos
 
-A credencial do Learner Lab nos secrets do repositório, e `APP_BASE_URL` apontando para o API
-Gateway. A credencial expira em ~4h e **é revogada quando a sessão do lab para**.
+Só a credencial do Learner Lab, nos três secrets `AWS_*` do repositório. Ela expira em ~4h e **é
+revogada quando a sessão do lab para**.
+
+O endereço do gateway **não** é secret. Ele vem do estado remoto do `infra-k8s`, que acompanha
+sozinho a recriação do ambiente. Já foi um secret `APP_BASE_URL`, e o resultado foi a function
+subir apontando para um gateway que não existia mais — o valor manual vencia o autoritativo, e a
+autenticação de cliente caía inteira sem nada quebrar no apply.
 
 ---
 
@@ -239,12 +244,16 @@ nota.
 | Repositório | Papel |
 |---|---|
 | [fiap-tech-challenge](https://github.com/diandria/fiap-tech-challenge) | a aplicação: expõe o lookup, valida o token, publica os eventos |
-| [fiap-tech-challenge-infra-k8s](https://github.com/diandria/fiap-tech-challenge-infra-k8s) | o API Gateway que roteia `POST /auth/cpf` para a `auth` |
+| [fiap-tech-challenge-infra-k8s](https://github.com/diandria/fiap-tech-challenge-infra-k8s) | o API Gateway que roteia `POST /auth/cpf` para a `auth`; fornece o endereço do gateway pelo estado remoto |
+| [fiap-tech-challenge-infra-db](https://github.com/diandria/fiap-tech-challenge-infra-db) | VPC e banco; as functions não o acessam, mas compartilham o armazenamento de parâmetros |
 
 A relação com a aplicação é bidirecional e vale entender:
 
 - a **`auth` chama** o endpoint interno `POST /auth/customers/lookup`, autenticando-se com o
-  `x-internal-token`. Esse endpoint **não é exposto no API Gateway**, por decisão registrada no M7
+  `x-internal-token`. Esse endpoint **é** enumerado no API Gateway, por
+  [ADR-011](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/adr/ADR-011-alcance-do-endpoint-de-lookup.md):
+  a function não está na VPC, então o gateway é o único caminho dela até a aplicação. A proteção é
+  o `x-internal-token`, não a ausência da rota
 - a **aplicação valida** o token que a `auth` assina, lendo o mesmo segredo do SSM
 - a **aplicação publica** no tópico que a `notifications` consome
 
