@@ -1,8 +1,7 @@
-# O endereco do gateway muda toda vez que ele e recriado. Manter o valor fixo
-# no tfvars significa que ele diverge silenciosamente na proxima recriacao --
-# e a function passa a consultar um endereco que nao existe mais.
-#
-# Lendo do estado do repositorio do cluster, o valor acompanha sozinho.
+# The gateway address changes every time it is recreated. A fixed value in
+# tfvars diverges silently on the next recreation, and the function then queries
+# an address that no longer exists. Reading it from the cluster repository's
+# state keeps it current.
 data "terraform_remote_state" "k8s" {
   backend = "s3"
 
@@ -14,7 +13,7 @@ data "terraform_remote_state" "k8s" {
 }
 
 locals {
-  # A variavel continua existindo para quem precisar apontar para outro lugar
-  # (um ambiente local, por exemplo); vazia, usa o gateway de verdade.
+  # The variable still exists for pointing somewhere else, such as a local
+  # environment; empty, it uses the real gateway.
   app_base_url = coalesce(var.app_base_url, data.terraform_remote_state.k8s.outputs.api_gateway_url)
 }

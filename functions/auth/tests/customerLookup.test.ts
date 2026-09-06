@@ -1,7 +1,7 @@
 import { HttpCustomerLookup } from '../src/customerLookup';
 
 describe('HttpCustomerLookup', () => {
-  const config = { baseUrl: 'http://app', internalToken: 'segredo', timeoutMs: 3000 };
+  const config = { baseUrl: 'http://app', internalToken: 'secret', timeoutMs: 3000 };
 
   const fetchReturning = (response: unknown) => jest.fn().mockResolvedValue(response);
 
@@ -31,7 +31,7 @@ describe('HttpCustomerLookup', () => {
       'http://app/auth/customers/lookup',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ 'x-internal-token': 'segredo' }),
+        headers: expect.objectContaining({ 'x-internal-token': 'secret' }),
       }),
     );
   });
@@ -42,9 +42,9 @@ describe('HttpCustomerLookup', () => {
     expect(await lookup.byCpf('111')).toEqual({ kind: 'invalid-cpf' });
   });
 
-  // 401 e 403 da aplicacao significam que a function nao se autenticou, nao que
-  // o cliente nao existe. Tratar como not-found esconderia configuracao errada
-  // do token interno atras de "cliente nao encontrado".
+  // 401 and 403 mean the function failed to authenticate, not that the customer
+  // is missing. Treating them as not-found would hide a misconfigured internal
+  // token behind "customer not found".
   it('should return unavailable GIVEN the app rejects the internal token WHEN looking up', async () => {
     const lookup = new HttpCustomerLookup(config, fetchReturning({ ok: false, status: 401 }));
 

@@ -1,22 +1,22 @@
 variable "aws_region" {
-  description = "Regiao AWS. O Learner Lab so libera us-east-1."
+  description = "AWS region. The Learner Lab only allows us-east-1."
   type        = string
   default     = "us-east-1"
 }
 
 variable "environment" {
-  description = "Nome do ambiente, usado em tags."
+  description = "Environment name, used in tags."
   type        = string
   default     = "production"
 }
 
 variable "app_base_url" {
   description = <<-TXT
-    Endereco da aplicacao, para o lookup de cliente.
+    Application address, used for the customer lookup.
 
-    Vazio por padrao: o valor real vem do estado do repositorio do cluster, e
-    acompanha sozinho quando o gateway e recriado. Preencher so para apontar
-    para outro lugar.
+    Empty by default: the real value comes from the cluster repository's state
+    and follows the gateway when it is recreated. Set it only to point
+    somewhere else.
   TXT
   type        = string
   default     = null
@@ -24,11 +24,11 @@ variable "app_base_url" {
 
 variable "lambda_runtime" {
   description = <<-TXT
-    Runtime das functions.
+    Runtime for both functions.
 
-    nodejs22.x, e nao nodejs20.x: o 20 foi deprecado pela AWS em 30/abr/2026 --
-    sem patches de seguranca, e criacao de novas functions bloqueada a partir
-    de fev/2027. Conferir com a tabela de runtimes suportados antes de mudar.
+    nodejs22.x, not nodejs20.x: AWS deprecated 20 on 2026-04-30, so it gets no
+    security patches and new functions are blocked from 2027-02. Check the
+    supported runtime table before changing this.
   TXT
   type        = string
   default     = "nodejs22.x"

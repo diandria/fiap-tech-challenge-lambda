@@ -19,9 +19,8 @@ const snsEvent = (messages: unknown[]): SNSEvent =>
 const channelThat = (send: jest.Mock): DeliveryChannel => ({ send });
 
 describe('Notifications handler', () => {
-  // O SNS pode entregar mais de um registro por invocacao. Tratar so o
-  // primeiro e o erro classico aqui, e ele passa despercebido em teste com um
-  // registro so.
+  // SNS can deliver more than one record per invocation. Handling only the
+  // first is the classic mistake, and a single-record test never catches it.
   it('should deliver one message per record GIVEN three records WHEN invoked', async () => {
     const send = jest.fn().mockResolvedValue(undefined);
     const handler = createHandler(channelThat(send));
@@ -31,13 +30,13 @@ describe('Notifications handler', () => {
     expect(send).toHaveBeenCalledTimes(3);
   });
 
-  // Erro permanente: relancar faria a Lambda reprocessar para sempre um evento
-  // que nunca vai funcionar, ate cair na dead-letter. Gasto sem ganho.
+  // Permanent error: rethrowing would reprocess forever an event that can
+  // never succeed, until it reaches the dead-letter queue.
   it('should not throw GIVEN a malformed payload WHEN invoked', async () => {
     const send = jest.fn();
     const handler = createHandler(channelThat(send));
 
-    await expect(handler(snsEvent(['nao-e-json']))).resolves.toBeUndefined();
+    await expect(handler(snsEvent(['not-json']))).resolves.toBeUndefined();
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -60,20 +59,20 @@ describe('Notifications handler', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  // Erro transitorio: relancar para o retry do SNS agir.
+  // Transient error: rethrow so the SNS retry applies.
   it('should propagate the error GIVEN the channel is unavailable WHEN invoked', async () => {
-    const send = jest.fn().mockRejectedValue(new Error('SES fora'));
+    const send = jest.fn().mockRejectedValue(new Error('SES down'));
     const handler = createHandler(channelThat(send));
 
-    await expect(handler(snsEvent([validEvent()]))).rejects.toThrow('SES fora');
+    await expect(handler(snsEvent([validEvent()]))).rejects.toThrow('SES down');
   });
 
-  // Um registro ruim no meio nao pode impedir os bons de serem entregues.
+  // A bad record in the middle must not stop the good ones being delivered.
   it('should deliver the valid records GIVEN one malformed among them WHEN invoked', async () => {
     const send = jest.fn().mockResolvedValue(undefined);
     const handler = createHandler(channelThat(send));
 
-    await handler(snsEvent([validEvent(), 'nao-e-json', validEvent()]));
+    await handler(snsEvent([validEvent(), 'not-json', validEvent()]));
 
     expect(send).toHaveBeenCalledTimes(2);
   });

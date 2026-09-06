@@ -1,41 +1,41 @@
 #!/usr/bin/env bash
 #
-# Copia a credencial local do Learner Lab para os secrets do GitHub Actions.
+# Copies the local Learner Lab credential into the GitHub Actions secrets.
 #
-#   ./scripts/refresh-aws-secrets.sh            so este repositorio
-#   ./scripts/refresh-aws-secrets.sh --todos    os quatro repositorios
+#   ./scripts/refresh-aws-secrets.sh          this repository only
+#   ./scripts/refresh-aws-secrets.sh --all    all four repositories
 #
-# A credencial do Learner Lab expira em cerca de 4 horas, e o CI para de
-# conseguir rodar o plan quando isso acontece. Este script existe para que
-# renovar seja um comando, e nao tres edicoes manuais na interface do GitHub.
+# The Learner Lab credential expires in about 4 hours, and the CI stops being
+# able to run the plan when it does. This makes renewal one command instead of
+# manual edits in the GitHub interface.
 #
-# Antes de rodar: Start Lab > AWS Details > AWS CLI > Show, e cole o bloco em
-# ~/.aws/credentials.
+# Before running: Start Lab > AWS Details > AWS CLI > Show, then paste the
+# block into ~/.aws/credentials.
 set -uo pipefail
 
-# Os quatro repositorios compartilham a mesma credencial do Learner Lab, e ela
-# expira nos quatro ao mesmo tempo. Renovar so um deixa o restante falhando com
-# ExpiredToken num passo que nao explica a causa.
-TODOS_OS_REPOS=(
+# The four repositories share the same Learner Lab credential and it expires in
+# all of them at once. Renewing only one leaves the rest failing with
+# ExpiredToken at a step that does not explain the cause.
+ALL_REPOS=(
   fiap-tech-challenge
   fiap-tech-challenge-lambda
   fiap-tech-challenge-infra-k8s
   fiap-tech-challenge-infra-db
 )
 
-ALVO="atual"
-[ "${1:-}" = "--todos" ] && ALVO="todos"
+TARGET="current"
+[ "${1:-}" = "--all" ] && TARGET="all"
 
 CRED_FILE="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
 PROFILE="${AWS_PROFILE:-default}"
 
-fail() { echo "ERRO: $*" >&2; exit 1; }
+fail() { echo "ERROR: $*" >&2; exit 1; }
 
-command -v gh >/dev/null 2>&1 || fail "gh CLI nao encontrado."
-gh auth status >/dev/null 2>&1 || fail "gh nao autenticado. Rode: gh auth login"
-[ -f "$CRED_FILE" ] || fail "Arquivo de credencial nao encontrado em $CRED_FILE"
+command -v gh >/dev/null 2>&1 || fail "gh CLI not found."
+gh auth status >/dev/null 2>&1 || fail "gh is not authenticated. Run: gh auth login"
+[ -f "$CRED_FILE" ] || fail "Credential file not found at $CRED_FILE"
 
-# Le uma chave da secao do perfil, sem imprimir o valor.
+# Reads a key from the profile section without printing the value.
 read_key() {
   awk -v profile="[$PROFILE]" -v key="$1" '
     $0 == profile { inside = 1; next }
@@ -50,38 +50,38 @@ KEY_ID=$(read_key aws_access_key_id)
 SECRET=$(read_key aws_secret_access_key)
 TOKEN=$(read_key aws_session_token)
 
-[ -n "$KEY_ID" ] || fail "aws_access_key_id nao encontrado no perfil [$PROFILE]"
-[ -n "$SECRET" ]  || fail "aws_secret_access_key nao encontrado no perfil [$PROFILE]"
-[ -z "$TOKEN" ] && echo "Aviso: sem aws_session_token. Credencial do Learner Lab costuma ter um."
+[ -n "$KEY_ID" ] || fail "aws_access_key_id not found in profile [$PROFILE]"
+[ -n "$SECRET" ]  || fail "aws_secret_access_key not found in profile [$PROFILE]"
+[ -z "$TOKEN" ] && echo "Warning: no aws_session_token. Learner Lab credentials usually have one."
 
-echo "Validando a credencial antes de publicar..."
-# describe-vpcs, e nao sts get-caller-identity: o Learner Lab revoga a sessao
-# mantendo o get-caller-identity respondendo. Publicar uma credencial revogada
-# so adia a descoberta para dentro do CI, onde diagnosticar custa mais.
+echo "Validating the credential before publishing..."
+# describe-vpcs, not sts get-caller-identity: the Learner Lab revokes the
+# session while get-caller-identity keeps answering. Publishing a revoked
+# credential only defers the discovery into the CI.
 AWS_ACCESS_KEY_ID="$KEY_ID" AWS_SECRET_ACCESS_KEY="$SECRET" AWS_SESSION_TOKEN="$TOKEN" \
   aws ec2 describe-vpcs --max-items 1 >/dev/null 2>&1 \
-  || fail "A credencial local nao alcanca a AWS. Renove no Learner Lab antes de publicar."
+  || fail "The local credential cannot reach AWS. Renew it in the Learner Lab first."
 echo "  ok"
 
-publicar_em() {
-  local destino=$1 rotulo=$2
-  echo "  $rotulo"
-  printf '%s' "$KEY_ID" | gh secret set AWS_ACCESS_KEY_ID     $destino >/dev/null || return 1
-  printf '%s' "$SECRET" | gh secret set AWS_SECRET_ACCESS_KEY $destino >/dev/null || return 1
-  printf '%s' "$TOKEN"  | gh secret set AWS_SESSION_TOKEN     $destino >/dev/null || return 1
+publish_to() {
+  local target=$1 label=$2
+  echo "  $label"
+  printf '%s' "$KEY_ID" | gh secret set AWS_ACCESS_KEY_ID     $target >/dev/null || return 1
+  printf '%s' "$SECRET" | gh secret set AWS_SECRET_ACCESS_KEY $target >/dev/null || return 1
+  printf '%s' "$TOKEN"  | gh secret set AWS_SESSION_TOKEN     $target >/dev/null || return 1
 }
 
-if [ "$ALVO" = "todos" ]; then
-  echo "Publicando nos quatro repositorios..."
-  falhas=0
-  for repo in "${TODOS_OS_REPOS[@]}"; do
-    publicar_em "--repo diandria/$repo" "$repo" || { echo "    FALHOU"; falhas=$((falhas+1)); }
+if [ "$TARGET" = "all" ]; then
+  echo "Publishing to all four repositories..."
+  failures=0
+  for repo in "${ALL_REPOS[@]}"; do
+    publish_to "--repo diandria/$repo" "$repo" || { echo "    FAILED"; failures=$((failures+1)); }
   done
-  [ "$falhas" -gt 0 ] && fail "$falhas repositorio(s) nao receberam a credencial."
+  [ "$failures" -gt 0 ] && fail "$failures repository(ies) did not receive the credential."
 else
-  echo "Publicando nos secrets do repositorio atual..."
-  publicar_em "" "$(basename "$PWD")" || fail "Falha ao publicar."
+  echo "Publishing to the current repository's secrets..."
+  publish_to "" "$(basename "$PWD")" || fail "Failed to publish."
 fi
 
 echo
-echo "Pronto. Os secrets valem enquanto a sessao do lab durar (cerca de 4h)."
+echo "Done. The secrets last as long as the lab session (about 4h)."

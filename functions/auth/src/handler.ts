@@ -4,18 +4,16 @@ import { JwtTokenIssuer } from './tokenIssuer';
 import { logEvent, LogWriter, parseTraceparent } from './log';
 
 /**
- * Emite o JWT de cliente a partir do CPF.
+ * Issues the customer JWT from a CPF.
  *
  *   200  { token, expiresIn, customer: { id, name } }
- *   400  corpo ausente, malformado, ou cpf ausente/invalido
- *   401  cliente nao encontrado
- *   403  cliente inativo
- *   503  falha ao consultar a aplicacao
+ *   400  missing or malformed body, or missing/invalid cpf
+ *   401  customer not found
+ *   403  customer inactive
+ *   503  failed to reach the application
  *
- * O 401 para cliente nao encontrado e deliberado. Devolver 404 transformaria
- * o endpoint num oraculo de enumeracao: daria para descobrir quem e cliente da
- * oficina testando CPFs. O 401 generico fecha essa porta, e o corpo tambem nao
- * diz o motivo.
+ * An unknown customer gets 401, not 404: a 404 would turn the endpoint into an
+ * enumeration oracle, revealing who is a customer by testing CPFs.
  */
 export interface HandlerDeps {
   lookup: CustomerLookup;
@@ -25,10 +23,9 @@ export interface HandlerDeps {
 }
 
 /**
- * Why each request ended the way it did. It is a fixed vocabulary, not the
- * HTTP status, because 400 alone does not say whether the body was malformed
- * or the CPF failed its check digit, and that difference is what somebody
- * reading the log is after.
+ * Why the request ended the way it did. A fixed vocabulary rather than the
+ * HTTP status: 400 alone does not separate a malformed body from a CPF that
+ * failed its check digit.
  */
 type Outcome =
   | 'invalid-body'
@@ -46,8 +43,8 @@ const json = (statusCode: number, body: unknown): APIGatewayProxyResultV2 => ({
 });
 
 /**
- * Recebe as dependencias por parametro para que os testes componham sem tocar
- * em rede nem em variavel de ambiente.
+ * Takes its dependencies as parameters so tests can compose without touching
+ * the network or the environment.
  */
 export function createHandler(deps: HandlerDeps) {
   return async function handler(
@@ -55,9 +52,8 @@ export function createHandler(deps: HandlerDeps) {
   ): Promise<APIGatewayProxyResultV2> {
     const incoming = event.headers?.traceparent;
 
-    // One line per request, whatever the outcome. Never the CPF: it is
-    // personal data, and the application redacts it on its side for the same
-    // reason. The customer id is enough to follow the case.
+    // One line per request, whatever the outcome. Never the CPF: the customer
+    // id is enough to follow the case.
     const finish = (
       statusCode: number,
       body: unknown,
@@ -87,8 +83,8 @@ export function createHandler(deps: HandlerDeps) {
 
     let cpf: unknown;
 
-    // JSON.parse desprotegido derruba a function, e o API Gateway devolve 502.
-    // 502 nao diz ao cliente que o problema e o corpo que ele mandou.
+    // An unguarded JSON.parse crashes the function and the gateway answers
+    // 502, which does not tell the caller the body was the problem.
     try {
       cpf = (JSON.parse(event.body ?? '{}') as { cpf?: unknown }).cpf;
     } catch {
@@ -102,8 +98,8 @@ export function createHandler(deps: HandlerDeps) {
     const result = await deps.lookup.byCpf(cpf.trim(), incoming);
     const trace = { traceparent: result.traceparent };
 
-    // A uniao discriminada obriga a tratar os quatro casos: esquecer um seria
-    // erro de compilacao, nao 500 em producao.
+    // The discriminated union forces all four cases to be handled: missing one
+    // is a compile error, not a 500 in production.
     switch (result.kind) {
       case 'invalid-cpf':
         return finish(400, { error: 'invalid cpf' }, 'invalid-cpf', trace);
@@ -117,9 +113,8 @@ export function createHandler(deps: HandlerDeps) {
       case 'found': {
         const customerId = result.customer.id;
 
-        // Cliente inativo e recusado antes de assinar: emitir token para quem
-        // nao pode usa-lo seria trabalho jogado fora, e um token valido
-        // circulando sem necessidade.
+        // An inactive customer is refused before signing: issuing a token
+        // nobody can use is wasted work and one more valid token in circulation.
         if (!result.customer.active) {
           return finish(403, { error: 'customer is inactive' }, 'inactive', { ...trace, customerId });
         }

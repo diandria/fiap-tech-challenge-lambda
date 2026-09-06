@@ -1,6 +1,6 @@
 /**
- * Configuracao em JavaScript, e nao TypeScript: jest.config.ts exigiria
- * ts-node so para ler a propria configuracao.
+ * JavaScript rather than TypeScript: jest.config.ts would need ts-node just to
+ * read the configuration itself.
  */
 module.exports = {
   preset: 'ts-jest',

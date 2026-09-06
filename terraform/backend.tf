@@ -6,8 +6,8 @@ terraform {
 
     encrypt = true
 
-    # Trava nativa do S3. O dynamodb_table foi deprecado pelo Terraform;
-    # mesma decisao dos outros repositorios de infraestrutura.
+    # Native S3 locking. dynamodb_table was deprecated by Terraform; same
+    # decision as the other infrastructure repositories.
     use_lockfile = true
   }
 }

@@ -1,14 +1,11 @@
 import jwt from 'jsonwebtoken';
 
 /**
- * Assina o JWT de cliente.
+ * Signs the customer JWT.
  *
- * Esta e a unica responsabilidade do sistema que nao existe em nenhum outro
- * lugar (ADR-002): a aplicacao *valida* tokens, mas quem emite o de cliente e
- * esta function.
- *
- * O contrato das claims esta no RFC-003, e o middleware da aplicacao valida com
- * o mesmo segredo. Mudar qualquer claim aqui quebra o outro lado.
+ * The application validates tokens; this function is what issues the customer
+ * one (ADR-002). The claim contract is in RFC-003 and the application validates
+ * it with the same secret, so changing a claim here breaks the other side.
  */
 export interface IssuerConfig {
   secret: string;
@@ -17,7 +14,7 @@ export interface IssuerConfig {
 
 export interface IssuedToken {
   token: string;
-  /** Vida util em segundos, para o cliente saber quando renovar. */
+  /** Lifetime in seconds, so the client knows when to renew. */
   expiresIn: number;
 }
 
@@ -29,8 +26,8 @@ export class JwtTokenIssuer {
       {
         sub: customer.id,
         type: 'customer',
-        // Guarda so digitos: o CPF chega formatado ou nao, e a aplicacao
-        // compara com o valor normalizado que tem no banco.
+        // Digits only: the CPF arrives formatted or not, and the application
+        // compares against the normalised value it stores.
         cpf: cpf.replace(/\D/g, ''),
         name: customer.name,
       },
@@ -41,8 +38,8 @@ export class JwtTokenIssuer {
       },
     );
 
-    // O payload do JWT e apenas codificado em base64, nao cifrado: qualquer um
-    // le o conteudo. Por isso nada alem do contrato entra nas claims.
+    // The JWT payload is base64-encoded, not encrypted: anyone can read it, so
+    // nothing beyond the contract goes into the claims.
     const { exp, iat } = jwt.decode(token) as { exp: number; iat: number };
 
     return { token, expiresIn: exp - iat };

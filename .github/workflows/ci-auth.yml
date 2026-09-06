@@ -2,9 +2,8 @@ name: CI auth
 
 on:
   pull_request:
-    # Caminho filtrado de proposito: mexer numa function nao roda o CI da
-    # outra. E isso que torna os projetos independentes de fato, e nao pastas
-    # no mesmo repositorio.
+    # Path filter on purpose: touching one function does not run the other's
+    # CI. That is what makes the projects genuinely independent.
     paths:
       - 'functions/auth/**'
       - '.github/workflows/ci-auth.yml'
@@ -18,18 +17,18 @@ defaults:
 
 jobs:
   test:
-    name: Testes e build
+    name: Tests and build
     runs-on: ubuntu-latest
 
-    # No nivel do job para que os passos decidam por presenca: `secrets` nao
-    # existe no `if` de um job, mas `env` existe.
+    # At job level so steps can branch on presence: `secrets` is not available
+    # in a job's `if`, but `env` is.
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
     steps:
-      # Historico completo: sem ele o Sonar perde o conceito de "codigo novo",
-      # que e sobre o que os portoes de qualidade dele decidem.
+      # Full history: without it Sonar loses the notion of "new code", which is
+      # what its quality gates decide on.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -38,37 +37,37 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: npm ci
 
-      - name: Testes com cobertura
+      - name: Test with coverage
         run: npm run test:coverage
 
       - name: Build
         run: npm run build
 
-      # A Lambda procura por 'handler' no bundle. Sem este export a function
-      # faz deploy e quebra em toda invocacao com Runtime.HandlerNotFound --
-      # falha que os testes de composicao nao pegam.
-      - name: O bundle exporta handler
+      # Lambda looks for 'handler' in the bundle. Without the export the
+      # function deploys and fails on every invocation with
+      # Runtime.HandlerNotFound, which the composition tests do not catch.
+      - name: Bundle exports handler
         run: |
           node -e "
             const m = require('./dist/index.js');
             if (typeof m.handler !== 'function') {
-              console.error('dist/index.js nao exporta handler');
+              console.error('dist/index.js does not export handler');
               process.exit(1);
             }
-            console.log('handler exportado');
+            console.log('handler exported');
           "
 
-      - name: Analise do SonarQube
+      - name: SonarQube analysis
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v4
         with:
           projectBaseDir: functions/auth
 
-      # Avisa em vez de falhar sem o servidor configurado: um CI que vive
-      # vermelho por falta de credencial para de ser lido.
-      - name: Avisar configuracao ausente
+      # Warns rather than fails when the server is not configured: a CI left red
+      # for a missing credential stops being read.
+      - name: Report missing configuration
         if: env.SONAR_TOKEN == ''
-        run: echo "::warning::SONAR_TOKEN nao configurado — analise do SonarQube pulada."
+        run: echo "::warning::SONAR_TOKEN is not configured - SonarQube analysis skipped."
