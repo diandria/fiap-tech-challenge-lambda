@@ -7,7 +7,7 @@ import { JwtTokenIssuer } from '../src/tokenIssuer';
 // estes testes focados na fronteira, sem precisar de variavel de ambiente.
 const handler = createHandler({
   lookup: { byCpf: jest.fn() },
-  issuer: new JwtTokenIssuer({ secret: 'nao-usado', expiresIn: '1h' }),
+  issuer: new JwtTokenIssuer({ secret: 'unused', expiresIn: '1h' }),
 });
 
 const eventWith = (body: unknown): APIGatewayProxyEventV2 =>
@@ -24,11 +24,10 @@ describe('Auth handler payload validation', () => {
     expect(parse(res).error).toBe('cpf is required');
   });
 
-  // Corpo malformado e corpo ausente parecem o mesmo caso e nao sao: chegam por
-  // caminhos diferentes no API Gateway, e um JSON.parse desprotegido derruba a
-  // function com 502 em vez de responder 400.
+  // A malformed body and a missing one look alike but are not: they arrive by
+  // different paths, and an unguarded JSON.parse answers 502 instead of 400.
   it('should return 400 GIVEN a malformed body WHEN invoked', async () => {
-    const res = await handler({ body: 'nao-e-json' } as APIGatewayProxyEventV2);
+    const res = await handler({ body: 'not-json' } as APIGatewayProxyEventV2);
 
     expect(status(res)).toBe(400);
     expect(parse(res).error).toBe('invalid request body');

@@ -4,7 +4,7 @@ import { createHandler } from '../src/handler';
 import { CustomerLookup, LookupResult } from '../src/customerLookup';
 import { JwtTokenIssuer } from '../src/tokenIssuer';
 
-const SECRET = 'segredo-de-teste';
+const SECRET = 'test-secret';
 
 const lookupReturning = (result: LookupResult): CustomerLookup => ({
   byCpf: jest.fn().mockResolvedValue(result),
@@ -34,8 +34,8 @@ describe('Auth handler end to end', () => {
     expect(() => jwt.verify(body.token, SECRET)).not.toThrow();
   });
 
-  // Assinar antes de validar seria desperdicio e, pior, indicaria que a ordem
-  // das checagens esta errada.
+  // Signing before validating would be wasted work and would mean the order of
+  // the checks is wrong.
   it('should never call the issuer GIVEN an invalid cpf WHEN invoked', async () => {
     const issuer = new JwtTokenIssuer({ secret: SECRET, expiresIn: '1h' });
     const spy = jest.spyOn(issuer, 'issue');
@@ -56,9 +56,9 @@ describe('Auth handler end to end', () => {
 
     expect(status(res)).toBe(401);
     expect(body.error).toBe('authentication failed');
-    // O corpo nao pode dizer "nao encontrado": isso transformaria o endpoint
-    // num oraculo de enumeracao de clientes.
-    expect(JSON.stringify(body)).not.toMatch(/not.?found|nao.?encontrado/i);
+    // The body must not say "not found": that would turn the endpoint into a
+    // customer enumeration oracle.
+    expect(JSON.stringify(body)).not.toMatch(/not.?found/i);
   });
 
   it('should return 403 GIVEN an inactive customer WHEN invoked', async () => {
@@ -97,7 +97,7 @@ describe('Auth handler end to end', () => {
   it('should return 400 without throwing GIVEN a malformed body WHEN invoked', async () => {
     const handler = build(lookupReturning({ kind: 'unavailable' }));
 
-    const res = await handler({ body: 'nao-e-json' } as APIGatewayProxyEventV2);
+    const res = await handler({ body: 'not-json' } as APIGatewayProxyEventV2);
 
     expect(status(res)).toBe(400);
   });

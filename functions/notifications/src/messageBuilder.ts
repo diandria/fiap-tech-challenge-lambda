@@ -1,14 +1,13 @@
 import { ServiceOrderEvent } from './event';
 
 /**
- * Formata a mensagem que chega ao cliente.
+ * Formats the message the customer receives.
  *
- * Logica pura, separada do canal de entrega de proposito: e o que torna a
- * formatacao testavel sem dublê de AWS, e permite trocar de canal sem tocar
- * neste arquivo.
+ * Pure logic, kept apart from the delivery channel so formatting is testable
+ * without an AWS double and the channel can change without touching this file.
  *
- * Esta formatacao e a razao de a function existir. Assinar o topico de eventos
- * direto com um e-mail entregaria o JSON cru ao cliente.
+ * This formatting is why the function exists: subscribing an e-mail directly to
+ * the topic would deliver raw JSON to the customer.
  */
 export interface Message {
   to: string;
@@ -16,7 +15,7 @@ export interface Message {
   body: string;
 }
 
-/** Quem le a mensagem e o cliente da oficina, entao moeda em formato brasileiro. */
+/** The reader is the workshop's customer, so currency uses the Brazilian format. */
 const asCurrency = (value: number): string =>
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -40,8 +39,8 @@ function statusMessage(event: ServiceOrderEvent): Omit<Message, 'to'> {
 function budgetMessage(event: ServiceOrderEvent): Omit<Message, 'to'> {
   const total = event.serviceOrder.budgetTotal;
 
-  // Evento sem valor nao deveria acontecer, mas imprimir "undefined" ou "NaN"
-  // para o cliente e pior que omitir a linha.
+  // An event without a total should not happen, but printing "undefined" or
+  // "NaN" to the customer is worse than omitting the line.
   const amountLine =
     typeof total === 'number' && Number.isFinite(total)
       ? `Valor total: ${asCurrency(total)}`

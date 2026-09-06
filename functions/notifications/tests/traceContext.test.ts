@@ -19,16 +19,16 @@ describe('parseTraceparent', () => {
     expect(parseTraceparent(undefined)).toBeUndefined();
   });
 
-  // Um traceparent malformado nao pode derrubar a entrega da notificacao: a
-  // correlacao e util, mas nao e o trabalho da function.
+  // A malformed traceparent must not break delivery: correlation is useful but
+  // is not this function's job.
   it('should return undefined GIVEN a malformed traceparent WHEN parsing', () => {
-    expect(parseTraceparent('lixo')).toBeUndefined();
-    expect(parseTraceparent('00-curto-demais-01')).toBeUndefined();
+    expect(parseTraceparent('garbage')).toBeUndefined();
+    expect(parseTraceparent('00-too-short-01')).toBeUndefined();
     expect(parseTraceparent('')).toBeUndefined();
   });
 
-  // Um trace_id so de zeros e invalido pela especificacao do W3C, e registra-lo
-  // criaria um balde onde traces nao relacionados se juntariam.
+  // An all-zero trace id is invalid by the W3C specification, and logging it
+  // would bucket unrelated traces together.
   it('should return undefined GIVEN an all-zero trace id WHEN parsing', () => {
     expect(parseTraceparent(`00-${'0'.repeat(32)}-${SPAN_ID}-01`)).toBeUndefined();
   });

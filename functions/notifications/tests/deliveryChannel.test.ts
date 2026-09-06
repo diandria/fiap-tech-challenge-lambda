@@ -23,8 +23,8 @@ describe('LoggingDeliveryChannel', () => {
     spy.mockRestore();
   });
 
-  // O log precisa ser JSON com os campos que o Promtail promove a label
-  // (M5.T7), senao a notificacao nao fica pesquisavel no Grafana.
+  // The line has to be JSON with the fields Promtail promotes to labels, or the
+  // notification is not searchable in Grafana.
   it('should emit structured json GIVEN an event WHEN sending', async () => {
     const spy = captureInfo();
 
@@ -59,9 +59,8 @@ describe('LoggingDeliveryChannel trace correlation', () => {
     }
   }
 
-  // Sem isto o rastro morre no SNS: a entrega aparece no Grafana como um
-  // evento sem causa, e nao da para ligar a notificacao a requisicao que a
-  // originou.
+  // Without this the trail dies at SNS and the delivery shows up in Grafana as
+  // an event with no cause.
   it('should log trace_id and span_id GIVEN the event carries a traceparent WHEN delivering', () => {
     const payload = loggedPayload(`00-${TRACE_ID}-${SPAN_ID}-01`);
 
@@ -76,10 +75,9 @@ describe('LoggingDeliveryChannel trace correlation', () => {
     expect(payload).not.toHaveProperty('span_id');
   });
 
-  // Um traceparent quebrado nao pode impedir uma entrega que, fora isso, esta
-  // perfeita: a correlacao e util, mas nao e o trabalho da function.
+  // A broken traceparent must not stop an otherwise valid delivery.
   it('should still deliver GIVEN a malformed traceparent WHEN delivering', () => {
-    const payload = loggedPayload('lixo');
+    const payload = loggedPayload('garbage');
 
     expect(payload.msg).toBe('notificacao entregue');
     expect(payload).not.toHaveProperty('trace_id');

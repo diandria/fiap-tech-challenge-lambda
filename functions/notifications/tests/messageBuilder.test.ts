@@ -36,8 +36,8 @@ describe('buildMessage', () => {
     expect(msg.body).toContain('1.234,50');
   });
 
-  // Templates distintos por tipo, como o INotificationService da aplicacao ja
-  // estabelece com dois metodos: os dois eventos tem proposito diferente.
+  // One template per event type, matching the two methods the application's
+  // INotificationService already declares.
   it('should use different subjects GIVEN the two event types WHEN building', () => {
     const status = buildMessage(base);
     const budget = buildMessage({
@@ -60,7 +60,7 @@ describe('buildMessage', () => {
   it('should not leak internal identifiers beyond the order id GIVEN any event', () => {
     const msg = buildMessage(base);
 
-    // O id do cliente e interno; nao ha razao para ele aparecer na mensagem.
+    // The customer id is internal and has no reason to appear in the message.
     expect(msg.body).not.toContain('c1');
   });
 });

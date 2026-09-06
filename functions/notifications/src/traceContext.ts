@@ -1,24 +1,23 @@
 /**
- * Contexto de rastreamento propagado pelo evento.
+ * Trace context propagated through the event.
  */
 export interface TraceContext {
   traceId: string;
   spanId: string;
 }
 
-// 00-<32 hex>-<16 hex>-<2 hex>, conforme W3C Trace Context.
+// 00-<32 hex>-<16 hex>-<2 hex>, per W3C Trace Context.
 const TRACEPARENT = /^[0-9a-f]{2}-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/;
 
-// Ids so de zeros sao invalidos pela especificacao. Registra-los criaria um
-// balde onde traces sem relacao nenhuma apareceriam juntos no Grafana.
+// All-zero ids are invalid by the specification. Logging them would bucket
+// unrelated traces together in Grafana.
 const ALL_ZEROS = /^0+$/;
 
 /**
- * Extrai trace e span do cabecalho `traceparent`.
+ * Extracts trace and span ids from the `traceparent` header.
  *
- * Devolve undefined em vez de lancar: a correlacao e util, mas nao e o
- * trabalho desta function. Um traceparent malformado nao pode impedir a
- * entrega de uma notificacao que, fora isso, esta perfeita.
+ * Returns undefined rather than throwing: a malformed header must not stop an
+ * otherwise valid notification from being delivered.
  */
 export function parseTraceparent(traceparent?: string): TraceContext | undefined {
   if (!traceparent) return undefined;

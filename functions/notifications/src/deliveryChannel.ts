@@ -4,24 +4,16 @@ import { buildMessage } from './messageBuilder';
 import { parseTraceparent } from './traceContext';
 
 /**
- * Entrega a notificacao como log estruturado.
+ * Delivers the notification as a structured log line.
  *
- * Nenhum e-mail e enviado, e isso e deliberado: o ambiente e de demonstracao,
- * e nao ha destinatario real para receber mensagem da oficina. Publicar num
- * topico com assinatura de e-mail entregaria correio a uma pessoa de verdade,
- * o que nao se quer aqui.
+ * No e-mail is sent: this is a demonstration environment with no real
+ * recipient. The line is JSON and reaches Loki through Promtail, so the
+ * notification is searchable in Grafana. A real channel (SES, a webhook)
+ * implements this same interface, and messageBuilder does not change.
  *
- * O log sai em JSON e cai no Loki pelo Promtail (M5.T7), entao a notificacao e
- * pesquisavel no Grafana -- o que basta para demonstrar que a function
- * formatou e entregou.
- *
- * Trocar por um canal real (SES, SNS com assinatura, webhook) e implementar
- * esta mesma interface. O messageBuilder nao muda.
- *
- * O log carrega `trace_id` e `span_id` quando o evento traz `traceparent`. Sao
- * eles que ligam esta entrega a requisicao que a originou, do outro lado da
- * fronteira assincrona: sem isso, o rastro morre no SNS e a function aparece
- * no Grafana como um evento sem causa.
+ * The line carries `trace_id` and `span_id` when the event brings a
+ * `traceparent`, which is what links the delivery to the request that caused
+ * it across the asynchronous boundary.
  */
 export class LoggingDeliveryChannel implements DeliveryChannel {
   async send(event: ServiceOrderEvent): Promise<void> {
@@ -33,8 +25,8 @@ export class LoggingDeliveryChannel implements DeliveryChannel {
         level: 'info',
         msg: 'notificacao entregue',
         service_name: 'car-repair-shop-notifications',
-        // Omitidos quando nao ha traceparent, em vez de nulos: campo ausente
-        // e mais honesto que campo vazio, e o Loki nao indexa o que nao veio.
+        // Omitted rather than null when there is no traceparent: Loki does not
+        // index a field that never arrived.
         ...(trace && { trace_id: trace.traceId, span_id: trace.spanId }),
         event_type: event.eventType,
         service_order_id: event.serviceOrder.id,

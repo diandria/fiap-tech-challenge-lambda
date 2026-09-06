@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { JwtTokenIssuer } from '../src/tokenIssuer';
 
-const SECRET = 'segredo-de-teste';
+const SECRET = 'test-secret';
 
 type Claims = {
   sub: string;
@@ -36,14 +36,14 @@ describe('JwtTokenIssuer', () => {
     expect(claimsOf(token).cpf).toBe('12345678909');
   });
 
-  // Contrato com o middleware da aplicacao (M7.T2), que valida com o MESMO
-  // segredo. Se este teste passar e a aplicacao recusar o token, a divergencia
-  // esta no segredo configurado, nao no codigo.
+  // Contract with the application middleware, which validates with the same
+  // secret. If this passes and the application still rejects the token, the
+  // divergence is in the configured secret, not in the code.
   it('should produce a token the application can verify GIVEN the same secret', () => {
     const { token } = issuer().issue({ id: 'c1', name: 'Ana' }, '12345678909');
 
     expect(() => jwt.verify(token, SECRET)).not.toThrow();
-    expect(() => jwt.verify(token, 'outro-segredo')).toThrow();
+    expect(() => jwt.verify(token, 'another-secret')).toThrow();
   });
 
   it('should report the lifetime in seconds GIVEN a one hour expiry WHEN issuing', () => {
@@ -52,9 +52,8 @@ describe('JwtTokenIssuer', () => {
     expect(expiresIn).toBe(3600);
   });
 
-  // A senha do cliente nunca passa por aqui, mas o CPF sim. Um token que
-  // carregasse dado alem do contrato vazaria pelo payload, que e apenas
-  // codificado em base64 e legivel por qualquer um.
+  // The CPF passes through here. A token carrying anything beyond the contract
+  // would leak it through the payload, which is base64-encoded and readable.
   it('should not carry claims beyond the contract GIVEN a customer WHEN issuing', () => {
     const { token } = issuer().issue({ id: 'c1', name: 'Ana' }, '12345678909');
 

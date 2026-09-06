@@ -14,10 +14,10 @@ describe('parseEvent', () => {
     expect(parse(valid)).toEqual(valid);
   });
 
-  // Devolve null em vez de lancar: evento malformado e erro permanente, e quem
-  // chama precisa distinguir isso de falha transitoria para decidir se relanca.
+  // Returns null rather than throwing: a malformed event is a permanent error,
+  // and the caller has to tell it apart from a transient failure.
   it.each([
-    ['json invalido', 'nao-e-json'],
+    ['invalid json', 'not-json'],
     ['nulo', 'null'],
     ['tipo desconhecido', { ...valid, eventType: 'DESCONHECIDO' }],
     ['sem tipo', { ...valid, eventType: undefined }],

@@ -4,8 +4,8 @@ import { APIGatewayProxyEventV2 } from 'aws-lambda';
  * Cobre a construcao a partir do ambiente, que os outros testes evitam de
  * proposito ao compor as dependencias na mao.
  *
- * Cada caso recarrega o modulo porque o handler guarda a instancia construida:
- * sem resetar, o segundo teste reaproveitaria a configuracao do primeiro.
+ * Each case reloads the module because the handler caches the built instance:
+ * without a reset, the second test would reuse the first one's configuration.
  */
 const loadHandler = async () => {
   jest.resetModules();
@@ -16,8 +16,8 @@ const withEnv = (vars: Record<string, string | undefined>) => {
   const previous = { ...process.env };
 
   for (const [key, value] of Object.entries(vars)) {
-    // Atribuir undefined grava a string "undefined", que e truthy: para a
-    // variavel ficar realmente ausente e preciso apagar a chave.
+    // Assigning undefined stores the string "undefined", which is truthy: the
+    // key has to be deleted for the variable to be genuinely absent.
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
@@ -32,7 +32,7 @@ const event = { body: JSON.stringify({ cpf: '12345678909' }) } as APIGatewayProx
 describe('Auth handler built from the environment', () => {
   const complete = {
     APP_BASE_URL: 'http://app',
-    INTERNAL_TOKEN: 'segredo',
+    INTERNAL_TOKEN: 'secret',
     JWT_SECRET: 'jwt-secreto',
   };
 
@@ -42,8 +42,8 @@ describe('Auth handler built from the environment', () => {
       const restore = withEnv({ ...complete, [missing]: undefined });
       const handler = await loadHandler();
 
-      // Falhar no arranque, com o nome da variavel, e melhor que responder 500
-      // sem dizer o que falta.
+      // Failing at startup, naming the variable, beats a 500 that does not say
+      // what is missing.
       await expect(handler(event)).rejects.toThrow(`missing environment variable: ${missing}`);
 
       restore();
@@ -54,8 +54,8 @@ describe('Auth handler built from the environment', () => {
     const restore = withEnv({ ...complete, LOOKUP_TIMEOUT_MS: '10' });
     const handler = await loadHandler();
 
-    // Sem aplicacao no ar, o lookup falha e vira 503 -- o que prova que a
-    // construcao funcionou e a requisicao chegou a ser tentada.
+    // With no application up the lookup fails and becomes 503, which proves the
+    // construction worked and the request was attempted.
     const res = (await handler(event)) as { statusCode: number };
 
     expect(res.statusCode).toBe(503);

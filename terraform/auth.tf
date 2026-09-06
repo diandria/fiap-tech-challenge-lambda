@@ -1,4 +1,4 @@
-# O Learner Lab nao permite criar role de IAM: a function assume a LabRole.
+# The Learner Lab does not allow creating IAM roles: the function assumes LabRole.
 data "aws_iam_role" "lab" {
   name = "LabRole"
 }
@@ -11,25 +11,24 @@ data "archive_file" "auth" {
 
 resource "aws_lambda_function" "auth" {
   function_name = "car-repair-shop-auth"
-  description   = "Emite o JWT de cliente a partir do CPF"
+  description   = "Issues the customer JWT from a CPF"
   role          = data.aws_iam_role.lab.arn
   handler       = "index.handler"
   runtime       = var.lambda_runtime
 
   filename = data.archive_file.auth.output_path
 
-  # Obrigatorio. Sem isto o Terraform nao percebe que o codigo mudou, e o
-  # deploy nao atualiza nada -- com o workflow verde. E o pior tipo de falha:
-  # silenciosa e com aparencia de sucesso.
+  # Required. Without it Terraform does not notice the code changed and the
+  # deploy updates nothing, with the workflow still green.
   source_code_hash = data.archive_file.auth.output_base64sha256
 
-  # Sincrona atras do API Gateway, que corta em 29s. Dez segundos deixam margem
-  # para o lookup (3s) e a assinatura, sem prender a conexao ate o limite.
+  # Synchronous behind the API Gateway, which cuts off at 29s. Ten seconds leave
+  # room for the lookup (3s) and the signing without holding the connection.
   timeout     = 10
   memory_size = 256
 
-  # Sem vpc_config, e isso e consequencia direta do ADR-002: a function nao
-  # toca o banco. Colocar a function na VPC so acrescentaria ENI e cold start.
+  # No vpc_config, a direct consequence of ADR-002: the function does not touch
+  # the database, so a VPC placement would only add an ENI and cold start.
 
   environment {
     variables = {
@@ -37,14 +36,14 @@ resource "aws_lambda_function" "auth" {
       JWT_SECRET     = random_password.jwt_secret.result
       INTERNAL_TOKEN = random_password.internal_token.result
 
-      # Convencao semantica, com service.name distinto por function.
+      # Semantic convention, with a distinct service.name per function.
       OTEL_SERVICE_NAME = "car-repair-shop-auth"
     }
   }
 }
 
-# Sem grupo declarado, a Lambda cria um com retencao infinita -- e log que
-# ninguem apaga vira custo que ninguem nota.
+# Without a declared group, Lambda creates one with infinite retention, and
+# logs nobody deletes become cost nobody notices.
 resource "aws_cloudwatch_log_group" "auth" {
   name              = "/aws/lambda/${aws_lambda_function.auth.function_name}"
   retention_in_days = 1

@@ -14,7 +14,7 @@ const build = (lookup: CustomerLookup) => {
   const lines: string[] = [];
   const handler = createHandler({
     lookup,
-    issuer: new JwtTokenIssuer({ secret: 'segredo-de-teste', expiresIn: '1h' }),
+    issuer: new JwtTokenIssuer({ secret: 'test-secret', expiresIn: '1h' }),
     log: (line) => lines.push(line),
   });
   const logged = () => JSON.parse(lines[0]) as Record<string, unknown>;
@@ -117,7 +117,7 @@ describe('Auth handler structured log', () => {
   it('should log outcome invalid-body GIVEN a malformed body WHEN invoked', async () => {
     const { handler, logged } = build(lookupReturning(active));
 
-    await handler({ body: 'nao-e-json' } as APIGatewayProxyEventV2);
+    await handler({ body: 'not-json' } as APIGatewayProxyEventV2);
 
     expect(logged()).toMatchObject({ outcome: 'invalid-body', status_code: 400 });
     expect(logged()).not.toHaveProperty('request_id');

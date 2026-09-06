@@ -1,13 +1,11 @@
-# Fonte unica de verdade para os dois segredos compartilhados.
+# Single source of truth for the two shared secrets.
 #
-# O JWT_SECRET precisa ser identico ao da aplicacao: ela valida o token que
-# esta function assina. Copiar o mesmo texto para dois lugares cria duas fontes
-# de verdade, e o modo de falha e ruim -- o token e assinado com sucesso e
-# recusado do outro lado, com erro que nao aponta para a causa.
+# JWT_SECRET has to match the application's, which validates the token this
+# function signs. Two copies would diverge, and the failure mode is bad: the
+# token is signed successfully and rejected on the other side.
 #
-# Gerando aqui e publicando no SSM, ninguem precisa copiar nada: a aplicacao
-# (M8) le o mesmo parametro. Mesma solucao que o repositorio do banco usa para
-# a senha do Postgres desde o M4.
+# Generated here and published to SSM, so the application reads the same
+# parameter and nobody copies anything.
 resource "random_password" "jwt_secret" {
   length  = 48
   special = false
@@ -20,14 +18,14 @@ resource "random_password" "internal_token" {
 
 resource "aws_ssm_parameter" "jwt_secret" {
   name        = "/car-repair-shop/auth/jwt-secret"
-  description = "Segredo de assinatura do JWT de cliente. Lido pela function e pela aplicacao."
+  description = "Signing secret for the customer JWT. Read by the function and the application."
   type        = "SecureString"
   value       = random_password.jwt_secret.result
 }
 
 resource "aws_ssm_parameter" "internal_token" {
   name        = "/car-repair-shop/auth/internal-token"
-  description = "Segredo que autentica a function no endpoint interno de lookup."
+  description = "Secret that authenticates the function on the internal lookup endpoint."
   type        = "SecureString"
   value       = random_password.internal_token.result
 }

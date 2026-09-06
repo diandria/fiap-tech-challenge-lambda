@@ -22,7 +22,7 @@ env:
 
 jobs:
   deploy:
-    name: Publicar function auth
+    name: Publish auth function
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -41,27 +41,24 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      # Uma operacao real, e nao sts get-caller-identity: quando o Learner Lab
-      # revoga a sessao (policy voc-cancel-cred), o sts continua respondendo a
-      # identidade e so as chamadas de verdade sao negadas. Checar com sts
-      # deixaria o workflow seguir e falhar adiante, com erro que nao aponta
-      # para a causa.
-      - name: Conferir credencial
+      # A real operation, not sts get-caller-identity: when the Learner Lab
+      # revokes the session, sts keeps answering and only real calls are denied.
+      # Checking with sts would let the workflow fail later, far from the cause.
+      - name: Verify credentials
         run: |
           aws ec2 describe-vpcs --max-items 1 > /dev/null 2>&1 || {
-            echo "::error::Credencial da AWS ausente, expirada ou revogada. A do Learner Lab cai quando a sessao do lab para: rode Start Lab e depois ./scripts/refresh-aws-secrets.sh"
+            echo "::error::AWS credentials missing, expired or revoked. Learner Lab credentials drop when the lab session stops: run Start Lab, then ./scripts/refresh-aws-secrets.sh"
             exit 1
           }
 
-      # As DUAS functions, e nao so a desta pipeline.
+      # BOTH functions, not only this pipeline's.
       #
-      # As pipelines sao independentes, mas o estado do Terraform e um so: o
-      # `apply` cobre a configuracao inteira, e o `archive_file` da outra
-      # function empacota o `dist/index.js` dela. Construir so uma faz o apply
-      # morrer em "could not archive missing file", apontando para um caminho
-      # que nada nesta pipeline mexeu -- erro que nao parece ter relacao com a
-      # mudanca que disparou o deploy.
-      - name: Build das functions
+      # The pipelines are independent but the Terraform state is one: `apply`
+      # covers the whole configuration, and the other function's `archive_file`
+      # packages its own dist/index.js. Building only one makes apply die with
+      # "could not archive missing file", pointing at a path this pipeline never
+      # touched.
+      - name: Build both functions
         run: |
           (cd functions/auth && npm ci && npm run build)
           (cd functions/notifications && npm ci && npm run build)
@@ -72,17 +69,17 @@ jobs:
           terraform init -input=false
           terraform apply -auto-approve -input=false -no-color
 
-      # Apply verde nao prova que a function funciona: o deploy anterior desta
-      # function subiu sem o export handler e quebrava em toda invocacao.
-      - name: Invocar a function e conferir a resposta
+      # A green apply does not prove the function works: an earlier deploy
+      # shipped without the handler export and broke on every invocation.
+      - name: Invoke the function and check the response
         run: |
           aws lambda invoke --function-name car-repair-shop-auth \
             --payload "$(echo -n '{"body":"{}"}' | base64 -w0)" \
             /tmp/out.json > /tmp/meta.json
           cat /tmp/meta.json
           if grep -q FunctionError /tmp/meta.json; then
-            echo "::error::A function respondeu com erro"
+            echo "::error::The function answered with an error"
             cat /tmp/out.json
             exit 1
           fi
-          echo "invocacao sem erro"
+          echo "invocation returned no error"

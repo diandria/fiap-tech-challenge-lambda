@@ -4,8 +4,8 @@ import { LoggingDeliveryChannel } from '../src/deliveryChannel';
 import { ServiceOrderEvent } from '../src/event';
 
 /**
- * Composicao completa: handler mais canal real de log. Os outros testes
- * exercitaram as pecas isoladas com dublê.
+ * Full composition: the handler plus the real logging channel. The other tests
+ * exercise the pieces in isolation with doubles.
  */
 const statusEvent = (): ServiceOrderEvent => ({
   eventType: 'SERVICE_ORDER_STATUS_CHANGED',
@@ -68,7 +68,7 @@ describe('Notifications function end to end', () => {
   });
 
   it('should skip the bad record and deliver the rest GIVEN a mixed batch WHEN invoked', async () => {
-    await run([statusEvent(), 'nao-e-json', budgetEvent()]);
+    await run([statusEvent(), 'not-json', budgetEvent()]);
 
     expect(delivered()).toHaveLength(2);
     expect(warn).toHaveBeenCalledTimes(1);
@@ -80,23 +80,23 @@ describe('Notifications function end to end', () => {
     expect(delivered()).toHaveLength(0);
   });
 
-  // Erro transitorio precisa chegar ao SNS para o retry agir; erro permanente
-  // nao. Este e o par que define o comportamento de reentrega.
+  // A transient error has to reach SNS so the retry applies; a permanent one
+  // must not. This pair defines the redelivery behaviour.
   it('should propagate the failure GIVEN the channel breaks WHEN invoked', async () => {
-    const quebrado = { send: jest.fn().mockRejectedValue(new Error('canal fora')) };
+    const broken = { send: jest.fn().mockRejectedValue(new Error('channel down')) };
 
-    await expect(createHandler(quebrado)(snsEvent([statusEvent()]))).rejects.toThrow('canal fora');
+    await expect(createHandler(broken)(snsEvent([statusEvent()]))).rejects.toThrow('channel down');
   });
 
   it('should never throw GIVEN every record is permanently invalid WHEN invoked', async () => {
-    await expect(run(['nao-e-json', '{}', 'null'])).resolves.toBeUndefined();
+    await expect(run(['not-json', '{}', 'null'])).resolves.toBeUndefined();
   });
 });
 
 describe('Lambda entry point', () => {
-  // A Lambda procura por `handler` no bundle. Sem este export, a function faz
-  // deploy e quebra em toda invocacao com Runtime.HandlerNotFound -- falha que
-  // nenhum teste de composicao pega.
+  // Lambda looks for `handler` in the bundle. Without the export the function
+  // deploys and fails on every invocation with Runtime.HandlerNotFound, which
+  // no composition test catches.
   it('should export a handler GIVEN the module is loaded WHEN the runtime looks for it', async () => {
     const mod = await import('../src/handler');
 

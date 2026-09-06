@@ -1,10 +1,8 @@
 /**
- * Consulta o cliente na aplicacao.
+ * Looks the customer up in the application.
  *
- * Os quatro desfechos sao uniao discriminada, e nao excecoes, porque os quatro
- * sao esperados -- nenhum e excepcional. Com uniao, o compilador obriga quem
- * consome a tratar os quatro: esquecer um caso vira erro de compilacao, e nao
- * um 500 em producao.
+ * The four outcomes are a discriminated union rather than exceptions: all four
+ * are expected. The compiler then forces every one to be handled.
  */
 export type LookupResult = (
   | { kind: 'found'; customer: { id: string; name: string; active: boolean } }
@@ -31,7 +29,7 @@ export interface LookupConfig {
   timeoutMs: number;
 }
 
-/** Assinatura minima de fetch que este client usa. */
+/** The minimal fetch signature this client uses. */
 type FetchLike = (
   url: string,
   init: {
@@ -57,8 +55,8 @@ export class HttpCustomerLookup implements CustomerLookup {
   ) {}
 
   async byCpf(cpf: string, traceparent?: string): Promise<LookupResult> {
-    // Sem limite de tempo, uma aplicacao lenta segura a function ate o timeout
-    // dela -- e o cliente espera por um 502 que nao explica nada.
+    // Without a deadline, a slow application holds the function until its own
+    // timeout and the caller gets an unexplained 502.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
@@ -67,8 +65,8 @@ export class HttpCustomerLookup implements CustomerLookup {
       'x-internal-token': this.config.internalToken,
     };
 
-    // Propaga o contexto de trace quando existe, para a requisicao aparecer no
-    // mesmo trace da chamada que a originou.
+    // Propagates the trace context so this request joins the trace of the call
+    // that originated it.
     if (traceparent) headers.traceparent = traceparent;
 
     try {
@@ -81,8 +79,8 @@ export class HttpCustomerLookup implements CustomerLookup {
 
       return await this.translate(response);
     } catch {
-      // Rede fora, DNS falhando, ou o limite de tempo estourando: do ponto de
-      // vista de quem chama, sao o mesmo desfecho.
+      // Network down, DNS failing or the deadline expiring are the same
+      // outcome from the caller's point of view.
       return { kind: 'unavailable' };
     } finally {
       clearTimeout(timer);
@@ -115,10 +113,9 @@ export class HttpCustomerLookup implements CustomerLookup {
         return { kind: 'invalid-cpf', ...trace };
       case 404:
         return { kind: 'not-found', ...trace };
-      // 401 e 403 significam que a *function* nao se autenticou, nao que o
-      // cliente nao existe. Traduzir para not-found esconderia token interno
-      // mal configurado atras de "cliente nao encontrado", e o sintoma
-      // apontaria para o lugar errado.
+      // 401 and 403 mean the function failed to authenticate, not that the
+      // customer is missing. Mapping them to not-found would hide a
+      // misconfigured internal token behind the wrong symptom.
       default:
         return { kind: 'unavailable', ...trace };
     }
