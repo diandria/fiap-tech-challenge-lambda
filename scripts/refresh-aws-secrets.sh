@@ -23,8 +23,16 @@ ALL_REPOS=(
   fiap-tech-challenge-infra-db
 )
 
+# An unknown flag must not fall through to the single-repository mode: the
+# runbook once used --todos, and the silent fallback published to one repo
+# while the other three kept an expired credential.
 TARGET="current"
-[ "${1:-}" = "--all" ] && TARGET="all"
+case "${1:-}" in
+  "")      ;;
+  --all)   TARGET="all" ;;
+  -h|--help) awk 'NR>1 && /^#/ {sub(/^# ?/,""); print; next} NR>1 {exit}' "$0"; exit 0 ;;
+  *)       echo "Unknown option: $1 (use --all to publish to the four repositories)" >&2; exit 1 ;;
+esac
 
 CRED_FILE="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
 PROFILE="${AWS_PROFILE:-default}"
