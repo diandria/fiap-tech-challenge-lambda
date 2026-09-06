@@ -252,6 +252,28 @@ nota.
 
 ---
 
+## Documentação arquitetural
+
+A documentação transversal do projeto (RFCs, ADRs, diagrama de componentes, diagramas de sequência e
+modelo ER) é **centralizada** na pasta `docs/architecture` do repositório da aplicação, e não
+replicada aqui. O diagrama acima é o específico deste repositório.
+
+| Documento | Onde |
+|---|---|
+| Diagrama de componentes | [components.md](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/components.md) |
+| Sequência: autenticação por CPF | [sequence-auth-cpf.md](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/sequence-auth-cpf.md) |
+| Sequência: ordem de serviço | [sequence-service-order.md](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/sequence-service-order.md) |
+| Modelo ER e justificativa do banco | [data-model.md](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/data-model.md) e [RFC-002](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/rfc/RFC-002-banco-de-dados.md) |
+| ADRs | [índice](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/adr/README.md) |
+| RFCs | [índice](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/rfc/README.md) |
+
+Os documentos que mais dizem respeito a este repositório: [ADR-002](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/adr/ADR-002-function-emissora-de-token.md)
+(function emissora de token), [ADR-003](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/adr/ADR-003-padrao-de-comunicacao.md) (comunicação
+assíncrona), [ADR-011](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/adr/ADR-011-alcance-do-endpoint-de-lookup.md) (alcance do lookup) e
+[RFC-003](https://github.com/diandria/fiap-tech-challenge/blob/main/docs/architecture/rfc/RFC-003-estrategia-de-autenticacao.md) (estratégia de autenticação).
+
+---
+
 ## Repositórios relacionados
 
 | Repositório | Papel |
