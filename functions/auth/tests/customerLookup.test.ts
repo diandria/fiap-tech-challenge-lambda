@@ -94,6 +94,29 @@ describe('HttpCustomerLookup', () => {
     expect(headers).not.toHaveProperty('traceparent');
   });
 
+  // The application answers every request with its traceparent; carrying it
+  // back is what lets the function's log be searched by the same trace id.
+  it('should return the application traceparent GIVEN the response carries one WHEN looking up', async () => {
+    const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+    const headers = { get: (name: string) => (name === 'traceparent' ? traceparent : null) };
+    const lookup = new HttpCustomerLookup(
+      config,
+      fetchReturning({ ok: false, status: 404, headers }),
+    );
+
+    expect(await lookup.byCpf('12345678909')).toEqual({ kind: 'not-found', traceparent });
+  });
+
+  it('should return no traceparent field GIVEN the response has no such header WHEN looking up', async () => {
+    const headers = { get: () => null };
+    const lookup = new HttpCustomerLookup(
+      config,
+      fetchReturning({ ok: true, status: 200, headers, json: async () => ({ id: 'c1', name: 'Ana', active: true }) }),
+    );
+
+    expect(await lookup.byCpf('12345678909')).not.toHaveProperty('traceparent');
+  });
+
   it('should abort GIVEN the app takes longer than the timeout WHEN looking up', async () => {
     const fetchMock = jest.fn(
       (_url: string, init: { signal?: AbortSignal }) =>

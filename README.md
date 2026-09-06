@@ -177,6 +177,19 @@ aws lambda invoke --function-name car-repair-shop-auth \
 **O `401` para cliente não encontrado é decisão de segurança.** Devolver `404` transformaria o
 endpoint num oráculo de enumeração — daria para descobrir quem é cliente da oficina testando CPFs.
 
+E conferir o log:
+
+```bash
+aws logs tail /aws/lambda/car-repair-shop-auth --follow
+```
+
+Cada invocação produz **uma linha JSON**, com `outcome` (`issued`, `not-found`, `inactive`,
+`invalid-cpf`, `unavailable`, `invalid-body`, `missing-cpf`), `status_code`, `request_id` do gateway
+e, quando a aplicação respondeu, o `trace_id` e o `span_id` que ela devolveu no cabeçalho
+`traceparent`. É o mesmo `trace_id` das linhas de log da aplicação para aquele lookup, então o
+caminho gateway → function → aplicação fica pesquisável pelo mesmo identificador. O CPF **nunca**
+aparece no log; o `customer_id` basta para acompanhar o caso.
+
 ### Testar a `notifications`
 
 ```bash

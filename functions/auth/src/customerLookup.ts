@@ -6,11 +6,20 @@
  * consome a tratar os quatro: esquecer um caso vira erro de compilacao, e nao
  * um 500 em producao.
  */
-export type LookupResult =
+export type LookupResult = (
   | { kind: 'found'; customer: { id: string; name: string; active: boolean } }
   | { kind: 'invalid-cpf' }
   | { kind: 'not-found' }
-  | { kind: 'unavailable' };
+  | { kind: 'unavailable' }
+) & {
+  /**
+   * `traceparent` the application answered with, when the call reached it.
+   * The trace id in it is the one the application's own log lines carry for
+   * this lookup, which is what lets this function's log be correlated with
+   * them. Absent when the application did not answer.
+   */
+  traceparent?: string;
+};
 
 export interface CustomerLookup {
   byCpf(cpf: string, traceparent?: string): Promise<LookupResult>;
@@ -31,7 +40,15 @@ type FetchLike = (
     body: string;
     signal?: AbortSignal;
   },
-) => Promise<{ ok: boolean; status: number; json?: () => Promise<unknown> }>;
+) => Promise<LookupResponse>;
+
+/** The subset of the fetch Response this client reads. */
+interface LookupResponse {
+  ok: boolean;
+  status: number;
+  json?: () => Promise<unknown>;
+  headers?: { get(name: string): string | null };
+}
 
 export class HttpCustomerLookup implements CustomerLookup {
   constructor(
@@ -72,34 +89,38 @@ export class HttpCustomerLookup implements CustomerLookup {
     }
   }
 
-  private async translate(response: {
-    ok: boolean;
-    status: number;
-    json?: () => Promise<unknown>;
-  }): Promise<LookupResult> {
+  private async translate(response: LookupResponse): Promise<LookupResult> {
+    // Any answer from the application carries its traceparent, error ones
+    // included: a 404 is logged on that side too, under the same trace id.
+    // Spread only when present, so a missing header is an absent field and not
+    // a `traceparent: undefined` that every consumer would have to filter.
+    const traceparent = response.headers?.get('traceparent') ?? undefined;
+    const trace = traceparent ? { traceparent } : {};
+
     if (response.ok) {
       const body = (await response.json?.()) as
         | { id: string; name: string; active: boolean }
         | undefined;
 
-      if (!body?.id) return { kind: 'unavailable' };
+      if (!body?.id) return { kind: 'unavailable', ...trace };
       return {
         kind: 'found',
         customer: { id: body.id, name: body.name, active: body.active },
+        ...trace,
       };
     }
 
     switch (response.status) {
       case 400:
-        return { kind: 'invalid-cpf' };
+        return { kind: 'invalid-cpf', ...trace };
       case 404:
-        return { kind: 'not-found' };
+        return { kind: 'not-found', ...trace };
       // 401 e 403 significam que a *function* nao se autenticou, nao que o
       // cliente nao existe. Traduzir para not-found esconderia token interno
       // mal configurado atras de "cliente nao encontrado", e o sintoma
       // apontaria para o lugar errado.
       default:
-        return { kind: 'unavailable' };
+        return { kind: 'unavailable', ...trace };
     }
   }
 }
