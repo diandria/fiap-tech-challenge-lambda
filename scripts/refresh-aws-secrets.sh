@@ -3,7 +3,7 @@
 # Copies the local Learner Lab credential into the GitHub Actions secrets.
 #
 #   ./scripts/refresh-aws-secrets.sh          this repository only
-#   ./scripts/refresh-aws-secrets.sh --all    all four repositories
+#   ./scripts/refresh-aws-secrets.sh --all    every repository of the project
 #
 # The Learner Lab credential expires in about 4 hours, and the CI stops being
 # able to run the plan when it does. This makes renewal one command instead of
@@ -13,14 +13,16 @@
 # block into ~/.aws/credentials.
 set -uo pipefail
 
-# The four repositories share the same Learner Lab credential and it expires in
-# all of them at once. Renewing only one leaves the rest failing with
-# ExpiredToken at a step that does not explain the cause.
+# Every repository with a pipeline that reaches AWS shares the same Learner Lab
+# credential, and it expires in all of them at once. Renewing only one leaves
+# the rest failing with ExpiredToken at a step that does not explain the cause.
 ALL_REPOS=(
   fiap-tech-challenge
   fiap-tech-challenge-lambda
   fiap-tech-challenge-infra-k8s
   fiap-tech-challenge-infra-db
+  fiap-tech-challenge-billing
+  fiap-tech-challenge-execution
 )
 
 TARGET="current"
@@ -72,7 +74,7 @@ publish_to() {
 }
 
 if [ "$TARGET" = "all" ]; then
-  echo "Publishing to all four repositories..."
+  echo "Publishing to all ${#ALL_REPOS[@]} repositories..."
   failures=0
   for repo in "${ALL_REPOS[@]}"; do
     publish_to "--repo diandria/$repo" "$repo" || { echo "    FAILED"; failures=$((failures+1)); }
