@@ -61,9 +61,34 @@ function budgetMessage(event: ServiceOrderEvent): Omit<Message, 'to'> {
   };
 }
 
-export function buildMessage(event: ServiceOrderEvent): Message {
-  const content =
-    event.eventType === 'BUDGET_READY' ? budgetMessage(event) : statusMessage(event);
+function paymentMessage(event: ServiceOrderEvent): Omit<Message, 'to'> {
+  const total = event.serviceOrder.budgetTotal;
+  const amountLine =
+    typeof total === 'number' && Number.isFinite(total) ? `Valor: ${asCurrency(total)}` : undefined;
 
-  return { to: event.customer.email, ...content };
+  return {
+    subject: `Link de pagamento da sua ordem de serviço`,
+    body: [
+      `Olá, ${event.customer.name}.`,
+      ``,
+      `O orçamento da ordem de serviço ${event.serviceOrder.id} foi aprovado.`,
+      ...(amountLine ? [amountLine] : []),
+      ``,
+      `Para pagar, acesse: ${event.payment?.checkoutUrl}`,
+      ``,
+      `O serviço começa assim que o pagamento for confirmado.`,
+      ``,
+      `Equipe da oficina`,
+    ].join('\n'),
+  };
+}
+
+const BUILDERS: Record<ServiceOrderEvent['eventType'], (event: ServiceOrderEvent) => Omit<Message, 'to'>> = {
+  SERVICE_ORDER_STATUS_CHANGED: statusMessage,
+  BUDGET_READY: budgetMessage,
+  PAYMENT_REQUESTED: paymentMessage,
+};
+
+export function buildMessage(event: ServiceOrderEvent): Message {
+  return { to: event.customer.email, ...BUILDERS[event.eventType](event) };
 }

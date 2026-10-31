@@ -63,4 +63,17 @@ describe('buildMessage', () => {
     // The customer id is internal and has no reason to appear in the message.
     expect(msg.body).not.toContain('c1');
   });
+
+  it('should include the checkout url GIVEN a payment requested event WHEN building', () => {
+    const msg = buildMessage({
+      ...base,
+      eventType: 'PAYMENT_REQUESTED',
+      serviceOrder: { id: 'os-1', status: 'APPROVED', budgetTotal: 191 },
+      payment: { checkoutUrl: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=1' },
+    });
+
+    expect(msg.subject).toContain('pagamento');
+    expect(msg.body).toContain('https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=1');
+    expect(msg.body).toContain('191,00');
+  });
 });

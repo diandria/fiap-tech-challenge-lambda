@@ -30,4 +30,27 @@ describe('parseEvent', () => {
   ])('should reject GIVEN %s WHEN parsing', (_label, input) => {
     expect(parse(input)).toBeNull();
   });
+
+  const paymentRequested = {
+    ...valid,
+    eventType: 'PAYMENT_REQUESTED',
+    serviceOrder: { id: 'os-1', status: 'APPROVED', budgetTotal: 191 },
+    payment: { checkoutUrl: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=1' },
+  };
+
+  it('should accept PAYMENT_REQUESTED with a checkout url GIVEN a complete event WHEN parsing', () => {
+    expect(parse(paymentRequested)).toEqual(paymentRequested);
+  });
+
+  // The link goes straight into a message the customer clicks; anything but
+  // https is either a mistake or an attempt to send them elsewhere.
+  it.each([
+    ['without payment', { ...paymentRequested, payment: undefined }],
+    ['without checkout url', { ...paymentRequested, payment: {} }],
+    ['with an http url', { ...paymentRequested, payment: { checkoutUrl: 'http://mp.test/checkout' } }],
+    ['with a javascript url', { ...paymentRequested, payment: { checkoutUrl: 'javascript:alert(1)' } }],
+    ['with a relative url', { ...paymentRequested, payment: { checkoutUrl: '/payments/mock/os-1' } }],
+  ])('should reject PAYMENT_REQUESTED GIVEN an event %s WHEN parsing', (_label, input) => {
+    expect(parse(input)).toBeNull();
+  });
 });
