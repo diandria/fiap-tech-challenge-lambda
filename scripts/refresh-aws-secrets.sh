@@ -33,7 +33,7 @@ case "${1:-}" in
   "")      ;;
   --all)   TARGET="all" ;;
   -h|--help) awk 'NR>1 && /^#/ {sub(/^# ?/,""); print; next} NR>1 {exit}' "$0"; exit 0 ;;
-  *)       echo "Unknown option: $1 (use --all to publish to the four repositories)" >&2; exit 1 ;;
+  *)       echo "Unknown option: $1 (use --all to publish to every repository)" >&2; exit 1 ;;
 esac
 
 CRED_FILE="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
