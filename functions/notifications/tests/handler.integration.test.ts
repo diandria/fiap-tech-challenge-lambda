@@ -20,6 +20,13 @@ const budgetEvent = (): ServiceOrderEvent => ({
   serviceOrder: { id: 'os-2', status: 'AGUARDANDO_APROVACAO', budgetTotal: 899.9 },
 });
 
+const paymentEvent = (): ServiceOrderEvent => ({
+  ...statusEvent(),
+  eventType: 'PAYMENT_REQUESTED',
+  serviceOrder: { id: 'os-3', status: 'APPROVED', budgetTotal: 899.9 },
+  payment: { checkoutUrl: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=3' },
+});
+
 const snsEvent = (messages: unknown[]): SNSEvent =>
   ({
     Records: messages.map((m) => ({
@@ -59,6 +66,21 @@ describe('Notifications function end to end', () => {
     await run([budgetEvent()]);
 
     expect(delivered()[0].body).toContain('899,90');
+  });
+
+  it('should deliver the payment link GIVEN a payment requested event WHEN invoked', async () => {
+    await run([paymentEvent()]);
+
+    const [msg] = delivered();
+    expect(msg.to).toBe('ana@exemplo.com');
+    expect(msg.body).toContain('https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=3');
+  });
+
+  it('should skip a payment requested event without a safe link GIVEN an http url WHEN invoked', async () => {
+    await run([{ ...paymentEvent(), payment: { checkoutUrl: 'http://example.com/pay' } }]);
+
+    expect(delivered()).toHaveLength(0);
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it('should deliver every record GIVEN a batch WHEN invoked', async () => {

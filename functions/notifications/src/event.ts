@@ -4,7 +4,7 @@
  * Declared locally on purpose: this function imports no code from the
  * application repository. The coupling between them is the written contract.
  */
-export type EventType = 'SERVICE_ORDER_STATUS_CHANGED' | 'BUDGET_READY';
+export type EventType = 'SERVICE_ORDER_STATUS_CHANGED' | 'BUDGET_READY' | 'PAYMENT_REQUESTED';
 
 export interface ServiceOrderEvent {
   eventType: EventType;
@@ -20,9 +20,26 @@ export interface ServiceOrderEvent {
     name: string;
     email: string;
   };
+  /** Only on PAYMENT_REQUESTED, published by the billing service (ADR-015). */
+  payment?: {
+    checkoutUrl: string;
+  };
 }
 
-const KNOWN_TYPES: readonly string[] = ['SERVICE_ORDER_STATUS_CHANGED', 'BUDGET_READY'];
+const KNOWN_TYPES: readonly string[] = ['SERVICE_ORDER_STATUS_CHANGED', 'BUDGET_READY', 'PAYMENT_REQUESTED'];
+
+/**
+ * The link goes into a message the customer clicks, so only an absolute https
+ * address is accepted.
+ */
+function isSafeLink(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Validates the event shape before any use.
@@ -45,6 +62,7 @@ export function parseEvent(raw: string): ServiceOrderEvent | null {
   if (!KNOWN_TYPES.includes(event.eventType as string)) return null;
   if (!event.serviceOrder?.id || !event.serviceOrder?.status) return null;
   if (!event.customer?.email || !event.customer?.name) return null;
+  if (event.eventType === 'PAYMENT_REQUESTED' && !isSafeLink(event.payment?.checkoutUrl)) return null;
 
   return event as ServiceOrderEvent;
 }
