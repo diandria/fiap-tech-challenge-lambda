@@ -6,7 +6,7 @@ data "terraform_remote_state" "k8s" {
   backend = "s3"
 
   config = {
-    bucket = "fiap-tech-challenge-tfstate-108337503570"
+    bucket = "fiap-tech-challenge-tfstate-938405266463"
     key    = "infra-k8s/terraform.tfstate"
     region = "us-east-1"
   }
