@@ -23,6 +23,7 @@ ALL_REPOS=(
   fiap-tech-challenge-infra-db
   fiap-tech-challenge-billing
   fiap-tech-challenge-execution
+  fiap-tech-challenge-payment
 )
 
 # An unknown flag must not fall through to the single-repository mode: the
